@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Giá vốn – Khánh Hà (nội bộ)</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<!-- Cổng mật khẩu — đăng nhập ngầm bằng 1 tài khoản Firebase Auth cố định -->
+<div class="login-gate" id="loginGate">
+  <form class="login-box" id="loginForm">
+    <span class="eyebrow">Nội bộ · Khánh Hà</span>
+    <h1>Giá vốn sản phẩm</h1>
+    <p>Nhập mật khẩu để xem, thêm, sửa, xoá sản phẩm.</p>
+    <input type="password" id="loginPassword" placeholder="Mật khẩu" autocomplete="current-password" required>
+    <button type="submit" class="btn-primary" id="loginSubmitBtn">Vào trang</button>
+    <p class="login-error" id="loginError"></p>
+  </form>
+</div>
+
+<div id="appRoot" hidden>
+
+  <div class="topbar">
+    <div class="wrap">
+      <h2>Sản phẩm</h2>
+      <button type="button" class="icon-btn" id="logoutBtn" title="Đăng xuất">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <h1>Danh sách sản phẩm</h1>
+          <p id="productSubtitle">Đang tải...</p>
+        </div>
+        <button type="button" class="btn-primary" id="addProductBtn">+ Thêm sản phẩm</button>
+      </div>
+
+      <div class="filter-toolbar">
+        <input type="text" id="productSearch" placeholder="Tìm theo tên sản phẩm...">
+        <select id="categoryFilterSelect">
+          <option value="all">Tất cả danh mục</option>
+        </select>
+      </div>
+
+      <div id="productGrid">
+        <div class="m-card"><div class="m-top"><div class="skeleton-thumb"></div><div class="skeleton-body"><div class="skeleton-line w-60"></div><div class="skeleton-line w-30"></div></div></div></div>
+        <div class="m-card"><div class="m-top"><div class="skeleton-thumb"></div><div class="skeleton-body"><div class="skeleton-line w-60"></div><div class="skeleton-line w-30"></div></div></div></div>
+        <div class="m-card"><div class="m-top"><div class="skeleton-thumb"></div><div class="skeleton-body"><div class="skeleton-line w-60"></div><div class="skeleton-line w-30"></div></div></div></div>
+        <div class="m-card"><div class="m-top"><div class="skeleton-thumb"></div><div class="skeleton-body"><div class="skeleton-line w-60"></div><div class="skeleton-line w-30"></div></div></div></div>
+      </div>
+      <div class="pagination-bar" id="productPagination"></div>
+
+      <p class="page-note">Trang nội bộ — không chia sẻ link ra ngoài.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Modal thêm/sửa sản phẩm -->
+<div class="modal-overlay" id="productModal" hidden>
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2 id="modalTitle">Thêm sản phẩm</h2>
+      <button type="button" class="modal-close" id="modalCloseBtn" aria-label="Đóng">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <label for="pf-name">Tên sản phẩm</label>
+      <input type="text" id="pf-name" placeholder="Ví dụ: Nồi inox 3 đáy 24cm">
+
+      <label for="pf-category">Danh mục</label>
+      <select id="pf-category"></select>
+
+      <div class="modal-row">
+        <div>
+          <label for="pf-price">Giá bán</label>
+          <input type="text" inputmode="numeric" id="pf-price" placeholder="0">
+        </div>
+        <div>
+          <label for="pf-cost">Giá vốn</label>
+          <input type="text" inputmode="numeric" id="pf-cost" placeholder="0">
+        </div>
+      </div>
+
+      <label>Ảnh sản phẩm (tối đa 4)</label>
+      <div class="image-row" id="pf-image-row"></div>
+      <div class="image-drop" id="pf-image-drop">
+        <span>Kéo ảnh vào đây hoặc bấm để chọn</span>
+        <input type="file" id="pf-image-file" accept="image/*" multiple hidden>
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button type="button" class="btn-ghost" id="modalCancelBtn">Huỷ</button>
+      <button type="button" class="btn-primary" id="modalSaveBtn">Lưu sản phẩm</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module" src="assets/js/app.js"></script>
+</body>
+</html>
