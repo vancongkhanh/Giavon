@@ -15,10 +15,9 @@
 <!-- Cổng mật khẩu — đăng nhập ngầm bằng 1 tài khoản Firebase Auth cố định -->
 <div class="login-gate" id="loginGate">
   <form class="login-box" id="loginForm">
-    <span class="eyebrow">Nội bộ · Khánh Hà</span>
+    <img class="login-logo" src="assets/img/logo.png" alt="Logo Cửa hàng Khánh Hà">
     <h1>Giá vốn sản phẩm</h1>
-    <p>Nhập mật khẩu để xem, thêm, sửa, xoá sản phẩm.</p>
-    <input type="password" id="loginPassword" placeholder="Mật khẩu" autocomplete="current-password" required>
+    <input type="password" id="loginPassword" placeholder="Nhập mật khẩu" autocomplete="current-password" required>
     <button type="submit" class="btn-primary" id="loginSubmitBtn">Vào trang</button>
     <p class="login-error" id="loginError"></p>
   </form>
@@ -28,7 +27,10 @@
 
   <div class="topbar">
     <div class="wrap">
-      <h2>Sản phẩm</h2>
+      <div class="topbar-brand">
+        <img src="assets/img/logo.png" alt="Logo Cửa hàng Khánh Hà">
+        <h2>Sản phẩm</h2>
+      </div>
       <button type="button" class="icon-btn" id="logoutBtn" title="Đăng xuất">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
       </button>
@@ -82,12 +84,12 @@
 
       <div class="modal-row">
         <div>
-          <label for="pf-price">Giá bán</label>
-          <input type="text" inputmode="numeric" id="pf-price" placeholder="0">
-        </div>
-        <div>
           <label for="pf-cost">Giá vốn</label>
           <input type="text" inputmode="numeric" id="pf-cost" placeholder="0">
+        </div>
+        <div>
+          <label for="pf-price">Giá bán</label>
+          <input type="text" inputmode="numeric" id="pf-price" placeholder="0">
         </div>
       </div>
 

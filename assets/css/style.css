@@ -53,6 +53,7 @@ input,select{font-family:inherit;}
   background:var(--card);border-radius:var(--radius);padding:36px 32px;max-width:360px;width:100%;
   text-align:center;display:flex;flex-direction:column;gap:14px;
 }
+.login-logo{width:56px;height:56px;border-radius:50%;object-fit:cover;margin:0 auto;}
 .login-box h1{font-size:24px;margin:0;}
 .login-box p{color:var(--muted);font-size:13.5px;margin:0;}
 .login-box .eyebrow{
@@ -71,6 +72,8 @@ input,select{font-family:inherit;}
 }
 .topbar .wrap{display:flex;align-items:center;justify-content:space-between;}
 .topbar h2{font-size:19px;}
+.topbar-brand{display:flex;align-items:center;gap:10px;}
+.topbar-brand img{width:34px;height:34px;border-radius:50%;object-fit:cover;flex:none;}
 
 /* ===== Nội dung ===== */
 .content{padding:20px 0 60px;}
