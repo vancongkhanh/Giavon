@@ -242,16 +242,16 @@ function renderProductGrid(container, products, categories) {
   container.innerHTML = products.map(function (p, i) {
     var cat = catMap[p.category] || {};
     var hasImage = p.images && p.images.length > 0;
-    var thumbStyle = hasImage
-      ? "background-image:url('" + storagePathToUrl(p.images[0]) + "');background-size:cover;background-position:center;"
-      : 'background:' + THUMB_COLORS[i % THUMB_COLORS.length] + ';';
-    var icon = hasImage ? '' : categoryIconSvg(cat.icon, 1.5);
+    var thumbStyle = hasImage ? '' : 'background:' + THUMB_COLORS[i % THUMB_COLORS.length] + ';';
+    var thumbInner = hasImage
+      ? '<img src="' + storagePathToUrl(p.images[0]) + '" alt="" loading="lazy" decoding="async">'
+      : categoryIconSvg(cat.icon, 1.5);
     var hasCost = p.costPrice !== undefined && p.costPrice !== null && p.costPrice !== '';
     var costDisplay = hasCost ? formatPrice(p.costPrice) : '—';
 
     return '<div class="m-card" data-category="' + escapeHtml(p.category) + '">' +
       '<div class="m-top">' +
-        '<div class="m-thumb" style="' + thumbStyle + '">' + icon + '</div>' +
+        '<div class="m-thumb" style="' + thumbStyle + '">' + thumbInner + '</div>' +
         '<div class="m-info"><div class="m-name">' + escapeHtml(p.name) + '</div><span class="m-tag">' + escapeHtml(cat.name || '') + '</span></div>' +
         '<div class="m-acts">' +
           '<button type="button" class="m-edit" data-action="edit" data-id="' + escapeHtml(p.id) + '" aria-label="Sửa">' + editIcon() + '</button>' +
@@ -538,86 +538,96 @@ function initCardActions(container) {
    BỘ LỌC DANH MỤC + TÌM KIẾM + PHÂN TRANG
    ======================================================================= */
 
+var currentPage = 1;
+
+/**
+ * Lọc trên dữ liệu (productsCache), không phải trên DOM — để chỉ cần
+ * render đúng danh sách của trang hiện tại (xem renderCurrentPage).
+ */
+function getFilteredProducts() {
+  var categorySelect = document.getElementById('categoryFilterSelect');
+  var searchInput = document.getElementById('productSearch');
+  var cat = categorySelect ? categorySelect.value : 'all';
+  var q = searchInput ? removeDiacritics(searchInput.value.trim()) : '';
+
+  return productsCache.filter(function (p) {
+    var matchesCategory = cat === 'all' || p.category === cat;
+    var matchesQuery = !q || removeDiacritics(p.name).indexOf(q) !== -1;
+    return matchesCategory && matchesQuery;
+  });
+}
+
+/**
+ * Chỉ render đúng PRODUCTS_PER_PAGE sản phẩm của trang hiện tại (thay vì
+ * render hết rồi ẩn bớt bằng CSS) — tránh trình duyệt tải ảnh của toàn
+ * bộ sản phẩm cùng lúc, vốn là nguyên nhân chính khiến trang tải chậm.
+ */
+function renderCurrentPage() {
+  var grid = document.getElementById('productGrid');
+  var subtitleEl = document.getElementById('productSubtitle');
+  var matches = getFilteredProducts();
+
+  if (subtitleEl) subtitleEl.textContent = matches.length + ' / ' + productsCache.length + ' sản phẩm';
+
+  var totalPages = Math.max(1, Math.ceil(matches.length / PRODUCTS_PER_PAGE));
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
+
+  var startIdx = (currentPage - 1) * PRODUCTS_PER_PAGE;
+  var pageItems = matches.slice(startIdx, startIdx + PRODUCTS_PER_PAGE);
+
+  renderProductGrid(grid, pageItems, categoriesCache);
+  renderPagination(matches.length, totalPages);
+}
+
+function renderPagination(totalItems, totalPages) {
+  var paginationEl = document.getElementById('productPagination');
+  if (!paginationEl) return;
+  if (totalItems <= PRODUCTS_PER_PAGE) {
+    paginationEl.innerHTML = '';
+    return;
+  }
+  paginationEl.innerHTML =
+    '<button type="button" class="page-btn" id="pagePrevBtn">‹ Trước</button>' +
+    '<span class="page-info">Trang ' + currentPage + ' / ' + totalPages + '</span>' +
+    '<button type="button" class="page-btn" id="pageNextBtn">Sau ›</button>';
+
+  var prevBtn = document.getElementById('pagePrevBtn');
+  var nextBtn = document.getElementById('pageNextBtn');
+  prevBtn.disabled = currentPage <= 1;
+  nextBtn.disabled = currentPage >= totalPages;
+  prevBtn.addEventListener('click', function () { goToPage(currentPage - 1); });
+  nextBtn.addEventListener('click', function () { goToPage(currentPage + 1); });
+}
+
+function goToPage(page) {
+  currentPage = page;
+  renderCurrentPage();
+  var grid = document.getElementById('productGrid');
+  if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/**
+ * Gắn sự kiện lọc 1 lần duy nhất (không gọi lại mỗi lần reload dữ liệu,
+ * tránh cộng dồn nhiều listener trùng nhau trên cùng 1 ô tìm kiếm/select).
+ */
 function initProductFilter() {
   var categorySelect = document.getElementById('categoryFilterSelect');
   var searchInput = document.getElementById('productSearch');
-  var grid = document.getElementById('productGrid');
-  var paginationEl = document.getElementById('productPagination');
-  var subtitleEl = document.getElementById('productSubtitle');
-
-  var currentPage = 1;
-
-  function applyFilters() {
-    var cards = grid.querySelectorAll('.m-card');
-    var cat = categorySelect ? categorySelect.value : 'all';
-    var q = searchInput ? removeDiacritics(searchInput.value.trim()) : '';
-    var matches = [];
-
-    cards.forEach(function (card) {
-      var matchesCategory = cat === 'all' || card.dataset.category === cat;
-      var nameEl = card.querySelector('.m-name');
-      var name = nameEl ? removeDiacritics(nameEl.textContent) : '';
-      var matchesQuery = !q || name.indexOf(q) !== -1;
-      var isMatch = matchesCategory && matchesQuery;
-      if (isMatch) matches.push(card);
-    });
-
-    if (subtitleEl) subtitleEl.textContent = matches.length + ' / ' + cards.length + ' sản phẩm';
-
-    var totalPages = Math.max(1, Math.ceil(matches.length / PRODUCTS_PER_PAGE));
-    if (currentPage > totalPages) currentPage = totalPages;
-    if (currentPage < 1) currentPage = 1;
-
-    var startIdx = (currentPage - 1) * PRODUCTS_PER_PAGE;
-    var pageSet = matches.slice(startIdx, startIdx + PRODUCTS_PER_PAGE);
-
-    cards.forEach(function (card) {
-      card.hidden = pageSet.indexOf(card) === -1;
-    });
-
-    renderPagination(matches.length, totalPages);
-  }
-
-  function renderPagination(totalItems, totalPages) {
-    if (!paginationEl) return;
-    if (totalItems <= PRODUCTS_PER_PAGE) {
-      paginationEl.innerHTML = '';
-      return;
-    }
-    paginationEl.innerHTML =
-      '<button type="button" class="page-btn" id="pagePrevBtn">‹ Trước</button>' +
-      '<span class="page-info">Trang ' + currentPage + ' / ' + totalPages + '</span>' +
-      '<button type="button" class="page-btn" id="pageNextBtn">Sau ›</button>';
-
-    var prevBtn = document.getElementById('pagePrevBtn');
-    var nextBtn = document.getElementById('pageNextBtn');
-    prevBtn.disabled = currentPage <= 1;
-    nextBtn.disabled = currentPage >= totalPages;
-    prevBtn.addEventListener('click', function () { goToPage(currentPage - 1); });
-    nextBtn.addEventListener('click', function () { goToPage(currentPage + 1); });
-  }
-
-  function goToPage(page) {
-    currentPage = page;
-    applyFilters();
-    if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
 
   if (categorySelect) {
     categorySelect.addEventListener('change', function () {
       currentPage = 1;
-      applyFilters();
+      renderCurrentPage();
     });
   }
 
   if (searchInput) {
     searchInput.addEventListener('input', function () {
       currentPage = 1;
-      applyFilters();
+      renderCurrentPage();
     });
   }
-
-  applyFilters();
 }
 
 /* =======================================================================
@@ -625,13 +635,12 @@ function initProductFilter() {
    ======================================================================= */
 
 async function reloadAndRender() {
-  var grid = document.getElementById('productGrid');
   var results = await Promise.all([fetchCategories(), fetchProducts()]);
   categoriesCache = results[0];
   productsCache = results[1];
   renderCategoryFilterSelect(categoriesCache);
-  renderProductGrid(grid, productsCache, categoriesCache);
-  initProductFilter();
+  currentPage = 1;
+  renderCurrentPage();
 }
 
 async function init() {
@@ -641,6 +650,7 @@ async function init() {
   initModalEvents();
   initCardActions(grid);
   initCostPriceEditing(grid);
+  initProductFilter();
 
   try {
     await reloadAndRender();

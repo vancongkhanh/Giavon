@@ -7,7 +7,7 @@
    ===================================================================== */
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js';
-import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
+import { getFirestore, enableIndexedDbPersistence } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js';
 
 const firebaseConfig = {
@@ -23,6 +23,11 @@ const app = initializeApp(firebaseConfig);
 
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+
+// Bật cache cục bộ (IndexedDB) — lần vào sau sẽ hiện dữ liệu cũ ngay lập
+// tức trong lúc chờ đồng bộ với server, thay vì màn hình trắng chờ tải.
+// Bỏ qua lỗi nếu trình duyệt không hỗ trợ (riêng tư) hoặc mở nhiều tab.
+enableIndexedDbPersistence(db).catch(function () {});
 
 let storageModulePromise = null;
 export function getStorageLazy() {

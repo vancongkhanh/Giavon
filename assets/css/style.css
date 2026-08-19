@@ -99,8 +99,9 @@ input,select{font-family:inherit;}
 .m-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 13px;margin-bottom:9px;}
 .m-card[hidden]{display:none;}
 .m-top{display:flex;align-items:flex-start;gap:10px;}
-.m-thumb{width:50px;height:50px;border-radius:10px;flex:none;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;color:#fff;}
+.m-thumb{width:50px;height:50px;border-radius:10px;flex:none;overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff;}
 .m-thumb svg{width:20px;height:20px;stroke:currentColor;}
+.m-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
 .m-info{flex:1;min-width:0;}
 .m-name{font-family:'Fraunces',serif;font-weight:600;font-size:14.5px;color:var(--ink);line-height:1.3;margin-bottom:4px;}
 .m-tag{display:inline-flex;background:var(--pine-pale);color:var(--pine);font-size:11px;font-weight:600;padding:2.5px 9px;border-radius:999px;}
