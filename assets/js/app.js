@@ -455,6 +455,8 @@ function saveProductFromModal(btn) {
   } else {
     data.slug = slugify(name);
     data.isActive = true;
+    data.stock = true;
+    data.isFeatured = false;
     data.createdAt = serverTimestamp();
     promise = addDoc(collection(db, 'products'), data);
   }
