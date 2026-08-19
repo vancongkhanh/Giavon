@@ -124,6 +124,7 @@ var loginPassword = document.getElementById('loginPassword');
 var loginError = document.getElementById('loginError');
 var loginSubmitBtn = document.getElementById('loginSubmitBtn');
 var logoutBtn = document.getElementById('logoutBtn');
+var reloadBtn = document.getElementById('reloadBtn');
 
 var dataLoaded = false;
 
@@ -150,6 +151,24 @@ if (logoutBtn) {
   logoutBtn.addEventListener('click', function () {
     signOut(auth);
     dataLoaded = false;
+  });
+}
+
+if (reloadBtn) {
+  reloadBtn.addEventListener('click', function () {
+    if (reloadBtn.disabled) return;
+    reloadBtn.disabled = true;
+    reloadBtn.classList.add('spinning');
+    reloadAndRender()
+      .then(function () { showToast('Đã tải lại dữ liệu'); })
+      .catch(function (err) {
+        console.error('Không tải lại được dữ liệu:', err);
+        showToast('Tải lại thất bại, thử lại');
+      })
+      .finally(function () {
+        reloadBtn.disabled = false;
+        reloadBtn.classList.remove('spinning');
+      });
   });
 }
 
