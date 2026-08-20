@@ -161,7 +161,10 @@ if (reloadBtn) {
     reloadBtn.disabled = true;
     reloadBtn.classList.add('spinning');
     reloadAndRender()
-      .then(function () { showToast('Đã tải lại dữ liệu'); })
+      .then(function () {
+        if (isSalesTabActive()) loadSalesTab();
+        showToast('Đã tải lại dữ liệu');
+      })
       .catch(function (err) {
         console.error('Không tải lại được dữ liệu:', err);
         showToast('Tải lại thất bại, thử lại');
@@ -205,8 +208,8 @@ async function fetchProducts() {
   return snap.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
 }
 
-function renderCategoryFilterSelect(categories) {
-  var select = document.getElementById('categoryFilterSelect');
+function renderCategorySelectOptions(selectId, categories) {
+  var select = document.getElementById(selectId);
   if (!select) return;
   var current = select.value || 'all';
   select.innerHTML = '<option value="all">Tất cả danh mục</option>' +
@@ -250,7 +253,7 @@ function renderProductGrid(container, products, categories) {
     var hasCost = p.costPrice !== undefined && p.costPrice !== null && p.costPrice !== '';
     var costDisplay = hasCost ? formatPrice(p.costPrice) : '—';
     var hasStock = p.stockQty !== undefined && p.stockQty !== null && p.stockQty !== '';
-    var stockDisplay = hasStock ? Number(p.stockQty).toLocaleString('vi-VN') : '—';
+    var stockDisplay = Number(hasStock ? p.stockQty : 0).toLocaleString('vi-VN');
 
     return '<div class="m-card" data-category="' + escapeHtml(p.category) + '">' +
       '<div class="m-top">' +
@@ -353,7 +356,7 @@ function initStockQtyEditing(container) {
     var current = span.dataset.value;
 
     function renderValue(val) {
-      var display = (val !== null && val !== undefined && val !== '') ? Number(val).toLocaleString('vi-VN') : '—';
+      var display = Number((val !== null && val !== undefined && val !== '') ? val : 0).toLocaleString('vi-VN');
       span.innerHTML = '<label>Tồn kho</label><b class="m-stock-value">' + display + '</b>';
     }
 
@@ -635,7 +638,7 @@ function renderSellSuggestions(queryStr) {
 
   box.innerHTML = matches.map(function (p) {
     var stockText = (p.stockQty !== undefined && p.stockQty !== null) ? ('Tồn: ' + Number(p.stockQty).toLocaleString('vi-VN')) : 'Tồn: —';
-    return '<div class="sug-item" data-id="' + escapeHtml(p.id) + '">' + escapeHtml(p.name) + '<span class="sug-stock">' + stockText + '</span></div>';
+    return '<div class="sug-item" data-id="' + escapeHtml(p.id) + '"><span class="sug-name">' + escapeHtml(p.name) + '</span><span class="sug-stock">' + stockText + '</span></div>';
   }).join('');
   box.hidden = false;
 }
@@ -674,7 +677,8 @@ function addSelectedToSellCart() {
   if (existing) {
     existing.qty += qty;
   } else {
-    sellCart.push({
+    // Thêm vào đầu mảng để sản phẩm mới thêm luôn hiện lên trên cùng.
+    sellCart.unshift({
       productId: product.id,
       productName: product.name,
       qty: qty,
@@ -717,6 +721,7 @@ function confirmSell() {
   batch.commit().then(function () {
     showToast('Đã ghi nhận bán hàng');
     closeSellModal();
+    if (isSalesTabActive()) loadSalesTab();
     return reloadAndRender();
   }).catch(function (err) {
     console.error('Không ghi được đơn bán:', err);
@@ -786,45 +791,134 @@ function initSellModalEvents() {
    ======================================================================= */
 
 var salesCache = null;
+var currentHistoryPage = 1;
+var HISTORY_PER_PAGE = 20;
 
 function formatSaleDate(ts) {
   if (!ts || !ts.toDate) return '';
   return ts.toDate().toLocaleString('vi-VN');
 }
 
-function renderHistoryList(filterText) {
+/**
+ * 1 dòng sản phẩm trong đơn bán khớp bộ lọc khi vừa đúng tên (nếu có
+ * nhập tìm) vừa đúng danh mục (nếu có chọn) — kết hợp AND cả 2 điều
+ * kiện. Cần tra productsCache để biết danh mục vì sales không lưu sẵn.
+ */
+function saleItemMatchesFilters(it, q, categorySlug) {
+  var matchesQuery = !q || removeDiacritics(it.productName).indexOf(q) !== -1;
+  if (!matchesQuery) return false;
+  if (categorySlug === 'all' || !categorySlug) return true;
+  var product = productsCache.find(function (p) { return p.id === it.productId; });
+  return !!product && product.category === categorySlug;
+}
+
+function getFilteredSales(qNorm, cat) {
+  if (!qNorm && cat === 'all') return (salesCache || []).slice();
+  return (salesCache || []).filter(function (sale) {
+    return sale.items.some(function (it) { return saleItemMatchesFilters(it, qNorm, cat); });
+  });
+}
+
+/**
+ * Chỉ render đúng HISTORY_PER_PAGE đơn bán của trang hiện tại, giống
+ * cách phân trang danh sách sản phẩm — tránh danh sách quá dài.
+ */
+function renderHistoryPage() {
   var listEl = document.getElementById('historyList');
   var summaryEl = document.getElementById('historySummary');
   if (!listEl || !salesCache) return;
 
-  var q = removeDiacritics((filterText || '').trim());
-  var matches = !q ? salesCache : salesCache.filter(function (sale) {
-    return sale.items.some(function (it) { return removeDiacritics(it.productName).indexOf(q) !== -1; });
-  });
+  var searchInput = document.getElementById('history-search');
+  var categorySelect = document.getElementById('historyCategorySelect');
+  var q = (searchInput ? searchInput.value : '').trim();
+  var cat = categorySelect ? categorySelect.value : 'all';
+  var qNorm = removeDiacritics(q);
+  var hasFilter = !!q || cat !== 'all';
 
-  if (q) {
+  var matches = getFilteredSales(qNorm, cat);
+  var statsEl = document.getElementById('historyStats');
+
+  if (hasFilter) {
     var totalSold = 0;
+    var qtyByProduct = {};
     matches.forEach(function (sale) {
       sale.items.forEach(function (it) {
-        if (removeDiacritics(it.productName).indexOf(q) !== -1) totalSold += it.qty;
+        if (saleItemMatchesFilters(it, qNorm, cat)) {
+          totalSold += it.qty;
+          qtyByProduct[it.productName] = (qtyByProduct[it.productName] || 0) + it.qty;
+        }
       });
     });
-    summaryEl.textContent = 'Tìm thấy ' + matches.length + ' lần bán, tổng ' + totalSold.toLocaleString('vi-VN') + ' sản phẩm khớp "' + filterText.trim() + '"';
+    var labelParts = [];
+    if (q) labelParts.push('tên khớp "' + q + '"');
+    if (cat !== 'all') {
+      var catObj = categoriesCache.find(function (c) { return c.slug === cat; });
+      labelParts.push('danh mục "' + (catObj ? catObj.name : cat) + '"');
+    }
+    summaryEl.textContent = 'Tìm thấy ' + matches.length + ' lần bán, tổng ' + totalSold.toLocaleString('vi-VN') + ' sản phẩm (' + labelParts.join(', ') + ')';
+
+    if (statsEl) {
+      var statEntries = Object.keys(qtyByProduct).map(function (name) { return { name: name, qty: qtyByProduct[name] }; });
+      statEntries.sort(function (a, b) { return b.qty - a.qty; });
+      statsEl.innerHTML = statEntries.map(function (e) {
+        return '<span class="stat-chip">' + escapeHtml(e.name) + ' <b>×' + e.qty.toLocaleString('vi-VN') + '</b></span>';
+      }).join('');
+      statsEl.hidden = false;
+    }
   } else {
     summaryEl.textContent = salesCache.length + ' lần bán gần đây';
+    if (statsEl) { statsEl.hidden = true; statsEl.innerHTML = ''; }
   }
+
+  var totalPages = Math.max(1, Math.ceil(matches.length / HISTORY_PER_PAGE));
+  if (currentHistoryPage > totalPages) currentHistoryPage = totalPages;
+  if (currentHistoryPage < 1) currentHistoryPage = 1;
 
   if (!matches.length) {
     listEl.innerHTML = '<p class="empty-state">Không có lịch sử phù hợp.</p>';
+    renderHistoryPagination(0, totalPages);
     return;
   }
 
-  listEl.innerHTML = matches.map(function (sale) {
-    var itemsText = sale.items.map(function (it) {
-      return escapeHtml(it.productName) + ' <b>×' + it.qty + '</b>';
-    }).join(', ');
-    return '<div class="history-row"><div class="hr-date">' + formatSaleDate(sale.createdAt) + '</div><div class="hr-items">' + itemsText + '</div></div>';
+  var startIdx = (currentHistoryPage - 1) * HISTORY_PER_PAGE;
+  var pageItems = matches.slice(startIdx, startIdx + HISTORY_PER_PAGE);
+
+  listEl.innerHTML = pageItems.map(function (sale) {
+    var itemsHtml = sale.items.map(function (it) {
+      var isMatch = hasFilter && saleItemMatchesFilters(it, qNorm, cat);
+      return '<div class="hr-item' + (isMatch ? ' match' : '') + '"><span class="hr-item-name">' + escapeHtml(it.productName) + '</span><span class="hr-item-qty">×' + it.qty + '</span></div>';
+    }).join('');
+    return '<div class="history-row"><div class="hr-date">' + formatSaleDate(sale.createdAt) + '</div><div class="hr-items">' + itemsHtml + '</div></div>';
   }).join('');
+
+  renderHistoryPagination(matches.length, totalPages);
+}
+
+function renderHistoryPagination(totalItems, totalPages) {
+  var paginationEl = document.getElementById('historyPagination');
+  if (!paginationEl) return;
+  if (totalItems <= HISTORY_PER_PAGE) {
+    paginationEl.innerHTML = '';
+    return;
+  }
+  paginationEl.innerHTML =
+    '<button type="button" class="page-btn" id="historyPagePrevBtn">‹ Trước</button>' +
+    '<span class="page-info">Trang ' + currentHistoryPage + ' / ' + totalPages + '</span>' +
+    '<button type="button" class="page-btn" id="historyPageNextBtn">Sau ›</button>';
+
+  var prevBtn = document.getElementById('historyPagePrevBtn');
+  var nextBtn = document.getElementById('historyPageNextBtn');
+  prevBtn.disabled = currentHistoryPage <= 1;
+  nextBtn.disabled = currentHistoryPage >= totalPages;
+  prevBtn.addEventListener('click', function () { goToHistoryPage(currentHistoryPage - 1); });
+  nextBtn.addEventListener('click', function () { goToHistoryPage(currentHistoryPage + 1); });
+}
+
+function goToHistoryPage(page) {
+  currentHistoryPage = page;
+  renderHistoryPage();
+  var listEl = document.getElementById('historyList');
+  if (listEl) listEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function fetchRecentSales() {
@@ -834,32 +928,53 @@ function fetchRecentSales() {
     });
 }
 
-function openHistoryModal() {
-  document.getElementById('historyModal').hidden = false;
-  document.getElementById('history-search').value = '';
+/**
+ * Tải lại danh sách lịch sử bán hàng — gọi mỗi lần chuyển sang tab Bán
+ * hàng, và sau khi vừa xác nhận 1 đơn bán để thấy ngay đơn mới nhất.
+ */
+function loadSalesTab() {
   document.getElementById('historyList').innerHTML = '<p class="empty-state">Đang tải...</p>';
-  document.getElementById('historySummary').textContent = '';
 
   fetchRecentSales().then(function (sales) {
     salesCache = sales;
-    renderHistoryList('');
+    currentHistoryPage = 1;
+    renderHistoryPage();
   }).catch(function (err) {
     console.error('Không tải được lịch sử bán hàng:', err);
     document.getElementById('historyList').innerHTML = '<p class="empty-state">Không tải được lịch sử, thử lại.</p>';
   });
 }
 
-function closeHistoryModal() {
-  document.getElementById('historyModal').hidden = true;
+function initSalesTabEvents() {
+  document.getElementById('history-search').addEventListener('input', function () {
+    currentHistoryPage = 1;
+    renderHistoryPage();
+  });
+  document.getElementById('historyCategorySelect').addEventListener('change', function () {
+    currentHistoryPage = 1;
+    renderHistoryPage();
+  });
 }
 
-function initHistoryModalEvents() {
-  document.getElementById('historyBtn').addEventListener('click', openHistoryModal);
-  document.getElementById('historyCloseBtn').addEventListener('click', closeHistoryModal);
-  document.getElementById('historyCloseBtn2').addEventListener('click', closeHistoryModal);
+/* =======================================================================
+   TAB SẢN PHẨM / BÁN HÀNG
+   ======================================================================= */
 
-  document.getElementById('history-search').addEventListener('input', function (e) {
-    renderHistoryList(e.target.value);
+function isSalesTabActive() {
+  var panel = document.getElementById('tabSales');
+  return !!panel && !panel.hidden;
+}
+
+function initTabs() {
+  var buttons = document.querySelectorAll('.tab-btn');
+  buttons.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var tab = btn.dataset.tab;
+      buttons.forEach(function (b) { b.classList.toggle('active', b === btn); });
+      document.getElementById('tabProducts').hidden = tab !== 'products';
+      document.getElementById('tabSales').hidden = tab !== 'sales';
+      if (tab === 'sales') loadSalesTab();
+    });
   });
 }
 
@@ -967,7 +1082,8 @@ async function reloadAndRender() {
   var results = await Promise.all([fetchCategories(), fetchProducts()]);
   categoriesCache = results[0];
   productsCache = results[1];
-  renderCategoryFilterSelect(categoriesCache);
+  renderCategorySelectOptions('categoryFilterSelect', categoriesCache);
+  renderCategorySelectOptions('historyCategorySelect', categoriesCache);
   currentPage = 1;
   renderCurrentPage();
 }
@@ -982,7 +1098,8 @@ async function init() {
   initStockQtyEditing(grid);
   initProductFilter();
   initSellModalEvents();
-  initHistoryModalEvents();
+  initTabs();
+  initSalesTabEvents();
 
   try {
     await reloadAndRender();
