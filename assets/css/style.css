@@ -83,6 +83,7 @@ input,select{font-family:inherit;}
 .section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:18px;flex-wrap:wrap;}
 .section-head h1{font-size:21px;margin-bottom:4px;}
 .section-head p{font-size:12.5px;color:var(--muted);}
+.section-head-btns{display:flex;gap:10px;flex-wrap:wrap;}
 
 /* ===== Bộ lọc ===== */
 .filter-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
@@ -115,20 +116,22 @@ input,select{font-family:inherit;}
 .m-div{border-top:1px solid var(--border);margin:10px 0 9px;}
 .m-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px;}
 
-/* Trái = giá vốn (bấm để sửa nhanh), phải = giá bán */
-.m-cost,.m-sell{display:flex;flex-direction:column;gap:1px;min-width:0;}
+/* Trái = giá vốn (bấm để sửa nhanh), giữa = tồn kho (bấm để sửa nhanh), phải = giá bán */
+.m-cost,.m-sell,.m-stock{display:flex;flex-direction:column;gap:1px;min-width:0;}
 .m-sell{align-items:flex-end;text-align:right;}
-.m-cost label,.m-sell label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
-.m-cost b,.m-sell b{font-variant-numeric:tabular-nums;font-weight:700;font-size:14.5px;}
+.m-stock{align-items:center;text-align:center;}
+.m-cost label,.m-sell label,.m-stock label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+.m-cost b,.m-sell b,.m-stock b{font-variant-numeric:tabular-nums;font-weight:700;font-size:14.5px;}
 .m-cost b{color:var(--copper);}
 .m-sell b{color:var(--pine);}
-.m-cost{cursor:pointer;border-radius:8px;padding:2px 6px;margin:-2px -6px;}
-.m-cost:hover{background:var(--pine-pale);}
-.m-cost-input{
-  width:100%;max-width:110px;padding:5px 8px;border-radius:8px;border:1.5px solid var(--copper);
-  font-size:13.5px;font-family:'Inter',sans-serif;background:var(--card);
+.m-stock b{color:var(--ink);}
+.m-cost,.m-stock{cursor:pointer;border-radius:8px;padding:2px 6px;margin:-2px -6px;}
+.m-cost:hover,.m-stock:hover{background:var(--pine-pale);}
+.m-cost-input,.m-stock-input{
+  width:100%;max-width:90px;padding:5px 8px;border-radius:8px;border:1.5px solid var(--copper);
+  font-size:13.5px;font-family:'Inter',sans-serif;background:var(--card);text-align:center;
 }
-@media (max-width:860px){.m-cost-input{font-size:16px;}}
+@media (max-width:860px){.m-cost-input,.m-stock-input{font-size:16px;}}
 
 /* ===== Skeleton loading ===== */
 @keyframes skeletonPulse{0%,100%{opacity:.5;}50%{opacity:1;}}
@@ -198,6 +201,41 @@ input,select{font-family:inherit;}
 }
 .image-drop:hover,.image-drop.drag-over{border-color:var(--copper);color:var(--copper);}
 .image-drop.disabled{opacity:.5;cursor:not-allowed;}
+
+/* ===== Modal bán hàng ===== */
+.sell-pick-row{display:flex;gap:8px;align-items:flex-start;}
+.sell-search-wrap{position:relative;flex:1;min-width:0;}
+.sell-pick-row input#sell-qty{width:64px;flex:none;text-align:center;}
+.sell-pick-row .btn-primary{padding:10px 16px;flex:none;}
+.sell-suggestions{
+  position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:10;
+  background:var(--card);border:1.5px solid var(--border);border-radius:10px;
+  max-height:220px;overflow-y:auto;box-shadow:0 12px 30px rgba(0,0,0,.12);
+}
+.sell-suggestions .sug-item{padding:10px 13px;font-size:13.5px;cursor:pointer;border-bottom:1px solid var(--border);}
+.sell-suggestions .sug-item:last-child{border-bottom:none;}
+.sell-suggestions .sug-item:hover,.sell-suggestions .sug-item.active{background:var(--pine-pale);}
+.sell-suggestions .sug-item .sug-stock{color:var(--muted);font-size:11.5px;margin-left:6px;}
+.sell-cart{display:flex;flex-direction:column;gap:8px;margin-top:8px;}
+.sell-cart-row{
+  display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--border);
+  border-radius:10px;background:var(--bg);
+}
+.sell-cart-row .sc-name{flex:1;min-width:0;font-size:13.5px;font-weight:600;color:var(--ink);}
+.sell-cart-row .sc-qty{font-variant-numeric:tabular-nums;font-weight:700;color:var(--pine);font-size:13.5px;flex:none;}
+.sell-cart-row .sc-remove{
+  flex:none;width:26px;height:26px;border-radius:50%;border:none;background:none;color:var(--muted);
+  font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.sell-cart-row .sc-remove:hover{color:var(--warn);background:var(--warn-bg);}
+
+/* ===== Modal lịch sử bán hàng ===== */
+.history-summary{font-size:12.5px;color:var(--muted);margin-top:6px;min-height:1.4em;}
+.history-list{display:flex;flex-direction:column;gap:8px;margin-top:8px;max-height:340px;overflow-y:auto;}
+.history-row{padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);}
+.history-row .hr-date{font-size:11.5px;color:var(--muted);font-weight:600;margin-bottom:4px;}
+.history-row .hr-items{font-size:13px;color:var(--ink);line-height:1.5;}
+.history-row .hr-items b{color:var(--pine);}
 
 /* ===== Toast thông báo ===== */
 .toast{
