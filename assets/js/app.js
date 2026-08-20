@@ -637,7 +637,7 @@ function renderSellSuggestions(queryStr) {
   }
 
   box.innerHTML = matches.map(function (p) {
-    var stockText = (p.stockQty !== undefined && p.stockQty !== null) ? ('Tồn: ' + Number(p.stockQty).toLocaleString('vi-VN')) : 'Tồn: —';
+    var stockText = 'Tồn: ' + Number((p.stockQty !== undefined && p.stockQty !== null) ? p.stockQty : 0).toLocaleString('vi-VN');
     return '<div class="sug-item" data-id="' + escapeHtml(p.id) + '"><span class="sug-name">' + escapeHtml(p.name) + '</span><span class="sug-stock">' + stockText + '</span></div>';
   }).join('');
   box.hidden = false;
