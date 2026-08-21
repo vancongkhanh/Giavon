@@ -129,6 +129,18 @@ var reloadBtn = document.getElementById('reloadBtn');
 
 var dataLoaded = false;
 
+/**
+ * Giới hạn phiên đăng nhập 12h cố định kể từ lúc đăng nhập — Firebase
+ * Auth tự làm mới token ngầm nên mặc định không tự hết hạn, phải tự
+ * quản lý mốc thời gian này ở phía client (localStorage).
+ */
+var SESSION_KEY = 'giavon_loginAt';
+var SESSION_MAX_MS = 12 * 60 * 60 * 1000;
+
+function isSessionExpired() {
+  var loginAt = Number(localStorage.getItem(SESSION_KEY) || 0);
+  return !loginAt || (Date.now() - loginAt) > SESSION_MAX_MS;
+}
 if (loginForm) {
   loginForm.addEventListener('submit', function (e) {
     e.preventDefault();
@@ -138,6 +150,9 @@ if (loginForm) {
     loginSubmitBtn.disabled = true;
     loginSubmitBtn.textContent = 'Đang kiểm tra...';
     signInWithEmailAndPassword(auth, GIAVON_EMAIL, pwd)
+      .then(function () {
+        localStorage.setItem(SESSION_KEY, String(Date.now()));
+      })
       .catch(function () {
         loginError.textContent = 'Sai mật khẩu, thử lại.';
       })
@@ -151,9 +166,19 @@ if (loginForm) {
 if (logoutBtn) {
   logoutBtn.addEventListener('click', function () {
     signOut(auth);
+    localStorage.removeItem(SESSION_KEY);
     dataLoaded = false;
   });
 }
+
+// Kiểm tra định kỳ trong lúc đang mở trang, để tự đăng xuất đúng giờ
+// ngay cả khi không tải lại trang (vd. để tab mở qua đêm).
+setInterval(function () {
+  if (auth.currentUser && isSessionExpired()) {
+    signOut(auth);
+    localStorage.removeItem(SESSION_KEY);
+  }
+}, 60 * 1000);
 
 if (reloadBtn) {
   reloadBtn.addEventListener('click', function () {
@@ -178,6 +203,11 @@ if (reloadBtn) {
 
 onAuthStateChanged(auth, function (user) {
   if (user) {
+    if (isSessionExpired()) {
+      localStorage.removeItem(SESSION_KEY);
+      signOut(auth);
+      return;
+    }
     loginGate.hidden = true;
     appRoot.hidden = false;
     loginPassword.value = '';
