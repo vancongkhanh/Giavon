@@ -282,7 +282,7 @@ function renderProductGrid(container, products, categories) {
     var hasStock = p.stockQty !== undefined && p.stockQty !== null && p.stockQty !== '';
     var stockDisplay = Number(hasStock ? p.stockQty : 0).toLocaleString('vi-VN');
 
-    return '<div class="m-card" data-category="' + escapeHtml(p.category) + '">' +
+    return '<div class="m-card" data-id="' + escapeHtml(p.id) + '" data-category="' + escapeHtml(p.category) + '">' +
       '<div class="m-top">' +
         '<div class="m-thumb" style="' + thumbStyle + '">' + thumbInner + '</div>' +
         '<div class="m-info"><div class="m-name">' + escapeHtml(p.name) + '</div><span class="m-tag">' + escapeHtml(cat.name || '') + '</span></div>' +
@@ -620,17 +620,119 @@ function initModalEvents() {
 function initCardActions(container) {
   container.addEventListener('click', function (e) {
     var btn = e.target.closest('[data-action]');
-    if (!btn) return;
-    var id = btn.dataset.id;
-    var product = productsCache.find(function (p) { return p.id === id; });
+    if (btn) {
+      var id = btn.dataset.id;
+      var product = productsCache.find(function (p) { return p.id === id; });
 
-    if (btn.dataset.action === 'edit') {
-      openProductModal(product);
-    } else if (btn.dataset.action === 'delete') {
-      if (confirm('Xoá sản phẩm "' + (product ? product.name : '') + '"? Không thể hoàn tác.')) {
-        deleteProduct(id);
+      if (btn.dataset.action === 'edit') {
+        openProductModal(product);
+      } else if (btn.dataset.action === 'delete') {
+        if (confirm('Xoá sản phẩm "' + (product ? product.name : '') + '"? Không thể hoàn tác.')) {
+          deleteProduct(id);
+        }
       }
+      return;
     }
+
+    // Bấm vào phần ảnh/tên sản phẩm (không phải nút sửa/xoá) → mở popup chi tiết
+    var top = e.target.closest('.m-top');
+    if (!top) return;
+    var card = top.closest('.m-card');
+    var detailProduct = card && productsCache.find(function (p) { return p.id === card.dataset.id; });
+    if (detailProduct) openDetailModal(detailProduct);
+  });
+}
+
+/* =======================================================================
+   CHI TIẾT SẢN PHẨM (popup xem nhanh khi bấm vào thẻ sản phẩm)
+   ======================================================================= */
+
+var DETAIL_AUTOPLAY_MS = 4000;
+var detailImages = [];
+var detailImageIndex = 0;
+var detailAutoplayTimer = null;
+
+function renderDetailGalleryDots() {
+  var dots = document.getElementById('detailDots');
+  if (detailImages.length < 2) { dots.hidden = true; dots.innerHTML = ''; return; }
+  dots.hidden = false;
+  dots.innerHTML = detailImages.map(function (_, i) {
+    return '<span class="' + (i === detailImageIndex ? 'active' : '') + '"></span>';
+  }).join('');
+}
+
+function goToDetailImage(idx) {
+  if (!detailImages.length) return;
+  detailImageIndex = ((idx % detailImages.length) + detailImages.length) % detailImages.length;
+  var track = document.getElementById('detailGalleryTrack');
+  // Trừ thêm khoảng gap (20px, khớp với gap của .detail-gallery-track) mỗi bước
+  // để không lộ mép ảnh kế bên.
+  track.style.transform = 'translateX(calc((-100% - 20px) * ' + detailImageIndex + '))';
+  renderDetailGalleryDots();
+}
+
+function stopDetailAutoplay() {
+  if (detailAutoplayTimer) { clearInterval(detailAutoplayTimer); detailAutoplayTimer = null; }
+}
+
+function startDetailAutoplay() {
+  stopDetailAutoplay();
+  if (detailImages.length < 2) return;
+  detailAutoplayTimer = setInterval(function () { goToDetailImage(detailImageIndex + 1); }, DETAIL_AUTOPLAY_MS);
+}
+
+function openDetailModal(product) {
+  detailImages = (product.images || []).slice();
+  detailImageIndex = 0;
+
+  var track = document.getElementById('detailGalleryTrack');
+  track.style.transition = 'none';
+  track.style.transform = 'translateX(0%)';
+  if (detailImages.length) {
+    track.innerHTML = detailImages.map(function (url) {
+      return '<img src="' + storagePathToUrl(url) + '" alt="">';
+    }).join('');
+  } else {
+    track.innerHTML = '<div class="detail-gallery-empty">' + categoryIconSvg(null, 1.3) + '</div>';
+  }
+  void track.offsetWidth; // ép reflow trước khi bật lại transition, tránh giật hình khi mở modal
+  track.style.transition = '';
+
+  var hasMultiple = detailImages.length > 1;
+  document.getElementById('detailPrevBtn').hidden = !hasMultiple;
+  document.getElementById('detailNextBtn').hidden = !hasMultiple;
+  renderDetailGalleryDots();
+
+  document.getElementById('detailName').textContent = product.name || '';
+  var cat = categoriesCache.find(function (c) { return c.slug === product.category; });
+  document.getElementById('detailCategory').textContent = cat ? cat.name : '';
+
+  var hasStock = product.stockQty !== undefined && product.stockQty !== null && product.stockQty !== '';
+  document.getElementById('detailStock').textContent = 'Tồn kho: ' + Number(hasStock ? product.stockQty : 0).toLocaleString('vi-VN');
+
+  var hasCost = product.costPrice !== undefined && product.costPrice !== null && product.costPrice !== '';
+  document.getElementById('detailCost').textContent = hasCost ? formatPrice(product.costPrice) : '—';
+  document.getElementById('detailSell').textContent = formatPrice(product.price);
+
+  document.getElementById('detailModal').hidden = false;
+  startDetailAutoplay();
+}
+
+function closeDetailModal() {
+  document.getElementById('detailModal').hidden = true;
+  stopDetailAutoplay();
+}
+
+function initDetailModalEvents() {
+  document.getElementById('detailCloseBtn').addEventListener('click', closeDetailModal);
+  document.getElementById('detailCloseBtn2').addEventListener('click', closeDetailModal);
+  document.getElementById('detailPrevBtn').addEventListener('click', function () {
+    goToDetailImage(detailImageIndex - 1);
+    startDetailAutoplay();
+  });
+  document.getElementById('detailNextBtn').addEventListener('click', function () {
+    goToDetailImage(detailImageIndex + 1);
+    startDetailAutoplay();
   });
 }
 
@@ -1125,6 +1227,7 @@ async function init() {
   initStockQtyEditing(grid);
   initProductFilter();
   initSellModalEvents();
+  initDetailModalEvents();
   initTabs();
   initSalesTabEvents();
 

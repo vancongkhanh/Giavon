@@ -180,6 +180,46 @@
   </div>
 </div>
 
+<!-- Modal chi tiết sản phẩm -->
+<div class="modal-overlay" id="detailModal" hidden>
+  <div class="modal-box detail-box">
+    <div class="modal-head">
+      <h2>Chi tiết sản phẩm</h2>
+      <button type="button" class="modal-close" id="detailCloseBtn" aria-label="Đóng">&times;</button>
+    </div>
+
+    <div class="modal-body detail-body">
+      <div class="detail-gallery" id="detailGallery">
+        <div class="detail-gallery-track" id="detailGalleryTrack"></div>
+        <button type="button" class="gallery-nav gallery-prev" id="detailPrevBtn" aria-label="Ảnh trước" hidden>&#8249;</button>
+        <button type="button" class="gallery-nav gallery-next" id="detailNextBtn" aria-label="Ảnh sau" hidden>&#8250;</button>
+        <div class="gallery-dots" id="detailDots" hidden></div>
+      </div>
+
+      <h3 class="detail-name" id="detailName"></h3>
+      <div class="detail-meta-row">
+        <span class="detail-tag" id="detailCategory"></span>
+        <span class="detail-stock" id="detailStock"></span>
+      </div>
+
+      <div class="detail-price-row">
+        <div class="detail-cost">
+          <label>Giá vốn</label>
+          <b id="detailCost">—</b>
+        </div>
+        <div class="detail-sell">
+          <label>Giá bán</label>
+          <b id="detailSell">—</b>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button type="button" class="btn-ghost" id="detailCloseBtn2">Đóng</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script type="module" src="assets/js/app.js"></script>
