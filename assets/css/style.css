@@ -274,7 +274,7 @@ input,select{font-family:inherit;}
 .m-top{cursor:pointer;}
 .detail-box{max-width:420px;}
 .detail-body{padding:0;gap:0;}
-.detail-gallery{position:relative;width:100%;aspect-ratio:1/1;background:var(--card);overflow:hidden;padding:10px;}
+.detail-gallery{position:relative;width:100%;aspect-ratio:1/1;background:var(--card);overflow:hidden;padding:10px;border-radius:10px;}
 .detail-gallery-track{display:flex;gap:20px;width:100%;height:100%;transition:transform .35s ease;}
 .detail-gallery-track img{width:100%;height:100%;object-fit:cover;flex:none;border-radius:8px;}
 .detail-gallery-track .detail-gallery-empty{
@@ -307,7 +307,6 @@ input,select{font-family:inherit;}
 .detail-cost label,.detail-sell label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
 .detail-cost b{font-size:17px;font-weight:700;color:var(--copper);font-variant-numeric:tabular-nums;}
 .detail-sell b{font-size:17px;font-weight:700;color:var(--pine);font-variant-numeric:tabular-nums;}
-.detail-box .modal-foot{border-top:none;}
 
 /* ===== Toast thông báo ===== */
 .toast{
